@@ -4,8 +4,10 @@
   <meta charset="UTF-8">
   <title>Torrino DAO Vote Verifier</title>
 
+  <!-- LIBRERIE -->
   <script src="https://cdn.jsdelivr.net/npm/tweetnacl/nacl.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bs58@5.0.0/dist/index.min.js"></script>
+  <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
 
   <style>
     body {
@@ -40,6 +42,7 @@
       margin-top: 5px;
       background: #0f172a;
       color: white;
+      font-size: 14px;
     }
 
     button {
@@ -92,12 +95,12 @@
   <div class="card">
     <h3>📂 Where to get the data</h3>
     <p class="info">
-      You can find all voting data inside the public CSV files stored here:<br><br>
+      All voting data is publicly available in CSV format here:<br><br>
       👉 <a href="https://github.com/Happydao/torrino-dao-voting-core/tree/main/data" target="_blank">
-      Torrino DAO Voting Data (GitHub)
+      Torrino DAO Voting Data
       </a><br><br>
 
-      Open a proposal CSV and copy:
+      From a CSV row, copy:
       <br><br>
       - <b>wallet</b><br>
       - <b>signed_message</b><br>
@@ -110,13 +113,13 @@
     <h3>✍️ Input data</h3>
 
     <label>Wallet address</label>
-    <input id="wallet" placeholder="Example: 59C4gdQT5VFq...">
+    <input id="wallet" placeholder="Paste wallet from CSV">
 
-    <label>Signed message (from CSV column: signed_message)</label>
-    <textarea id="message" rows="4" placeholder="Paste the signed_message from the CSV"></textarea>
+    <label>Signed message (CSV column: signed_message)</label>
+    <textarea id="message" rows="4" placeholder="Paste EXACT signed_message (no changes)"></textarea>
 
-    <label>Signature (from CSV column: signature)</label>
-    <textarea id="signature" rows="3" placeholder="Paste the signature from the CSV"></textarea>
+    <label>Signature (CSV column: signature)</label>
+    <textarea id="signature" rows="3" placeholder="Paste signature"></textarea>
 
     <button onclick="verify()">Verify Vote</button>
 
@@ -127,23 +130,20 @@
   <div class="card">
     <h3>🧠 What this verifies</h3>
     <p class="info">
-      This tool checks that:
-      <br><br>
       ✔ The signature was produced by the wallet<br>
-      ✔ The message has not been altered<br>
-      ✔ The vote is cryptographically valid<br>
+      ✔ The message has not been modified<br>
+      ✔ The vote is cryptographically valid
     </p>
   </div>
 
   <div class="card">
     <h3>⚠️ Important</h3>
     <p class="info">
-      This tool does NOT verify:
-      <br><br>
+      This tool does NOT verify:<br><br>
       - NFT ownership<br>
       - Voting eligibility<br>
       - Duplicate votes<br>
-      - Proposal validity or timing<br>
+      - Proposal validity or timing
     </p>
   </div>
 
@@ -160,14 +160,24 @@
 <script>
 function verify() {
   const wallet = document.getElementById("wallet").value.trim();
-  const message = document.getElementById("message").value.trim();
+  let message = document.getElementById("message").value;
   const signature = document.getElementById("signature").value.trim();
   const resultDiv = document.getElementById("result");
 
   try {
+    if (!wallet || !message || !signature) {
+      throw new Error("Missing input");
+    }
+
+    // pulizia base
+    message = message.replace(/\r/g, "").trim();
+
     const messageBytes = new TextEncoder().encode(message);
     const signatureBytes = bs58.decode(signature);
-    const publicKeyBytes = bs58.decode(wallet);
+
+    // 🔥 FIX IMPORTANTE
+    const publicKey = new solanaWeb3.PublicKey(wallet);
+    const publicKeyBytes = publicKey.toBytes();
 
     const isValid = nacl.sign.detached.verify(
       messageBytes,
@@ -182,7 +192,8 @@ function verify() {
     resultDiv.className = "result " + (isValid ? "ok" : "bad");
 
   } catch (err) {
-    resultDiv.innerText = "Error: invalid input data";
+    console.error(err);
+    resultDiv.innerText = "❌ Error: invalid input data";
     resultDiv.className = "result bad";
   }
 }
