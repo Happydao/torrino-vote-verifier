@@ -1,122 +1,67 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Torrino DAO Vote Verifier</title>
+<meta charset="UTF-8">
+<title>Torrino DAO Vote Verifier</title>
 
-  <!-- LIBRERIE -->
-  <script src="https://unpkg.com/tweetnacl@1.0.3/nacl.min.js"></script>
-  <script src="https://unpkg.com/bs58@5.0.0/dist/bs58.min.js"></script>
-  <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bs58@5.0.0/dist/bs58.min.js"></script>
 
-  <style>
-    body {
-      background: #0f172a;
-      color: #e2e8f0;
-      font-family: Arial;
-      padding: 20px;
-    }
-
-    .container {
-      max-width: 750px;
-      margin: auto;
-    }
-
-    h1 {
-      color: #38bdf8;
-    }
-
-    .card {
-      background: #1e293b;
-      padding: 20px;
-      border-radius: 12px;
-      margin-top: 20px;
-    }
-
-    input, textarea {
-      width: 100%;
-      padding: 10px;
-      border-radius: 8px;
-      border: none;
-      margin-top: 5px;
-      background: #0f172a;
-      color: white;
-      font-size: 14px;
-    }
-
-    button {
-      margin-top: 15px;
-      padding: 12px;
-      width: 100%;
-      border: none;
-      border-radius: 8px;
-      background: #38bdf8;
-      color: black;
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background: #0ea5e9;
-    }
-
-    .result {
-      margin-top: 20px;
-      font-size: 18px;
-      font-weight: bold;
-    }
-
-    .ok { color: #22c55e; }
-    .bad { color: #ef4444; }
-
-    .info {
-      font-size: 14px;
-      color: #94a3b8;
-      margin-top: 10px;
-    }
-  </style>
+<style>
+body { background:#0f172a; color:#e2e8f0; font-family:Arial; padding:20px; }
+.container { max-width:750px; margin:auto; }
+.card { background:#1e293b; padding:20px; border-radius:12px; margin-top:20px; }
+input, textarea {
+  width:100%; padding:10px; border-radius:8px; border:none;
+  margin-top:5px; background:#0f172a; color:white;
+}
+button {
+  margin-top:15px; padding:12px; width:100%;
+  border:none; border-radius:8px; background:#38bdf8;
+  font-weight:bold; cursor:pointer;
+}
+.result { margin-top:20px; font-size:18px; font-weight:bold; }
+.ok { color:#22c55e; }
+.bad { color:#ef4444; }
+</style>
 </head>
 
 <body>
 
 <div class="container">
 
-  <h1>🔐 Torrino DAO Vote Verifier</h1>
+<h1>🔐 Torrino DAO Vote Verifier</h1>
 
-  <div class="card">
-    <p class="info">
-      Paste data from the CSV files:<br>
-      wallet → signed_message → signature
-    </p>
-  </div>
+<div class="card">
+<p>
+Insert EXACT values from CSV:<br>
+wallet → signed_message → signature
+</p>
+</div>
 
-  <div class="card">
+<div class="card">
 
-    <h3>Input</h3>
+<label>Wallet</label>
+<input id="wallet">
 
-    <label>Wallet address</label>
-    <input id="wallet">
+<label>Signed Message (DO NOT MODIFY)</label>
+<textarea id="message" rows="4"></textarea>
 
-    <label>Signed message (CSV: signed_message)</label>
-    <textarea id="message" rows="4"></textarea>
+<label>Signature</label>
+<textarea id="signature" rows="3"></textarea>
 
-    <label>Signature (CSV: signature)</label>
-    <textarea id="signature" rows="3"></textarea>
+<button onclick="verify()">Verify</button>
 
-    <button onclick="verify()">Verify Vote</button>
+<div id="result" class="result"></div>
 
-    <div id="result" class="result"></div>
-
-  </div>
-
+</div>
 </div>
 
 <script>
 function verify() {
   const wallet = document.getElementById("wallet").value.trim();
-  let message = document.getElementById("message").value;
+  const message = document.getElementById("message").value;
   const signature = document.getElementById("signature").value.trim();
-
   const resultDiv = document.getElementById("result");
 
   try {
@@ -124,43 +69,35 @@ function verify() {
       throw new Error("Missing input");
     }
 
-    // 🔥 NORMALIZZA
-    message = message
-      .replace(/\r/g, "")
-      .replace(/\n/g, "")
-      .trim();
+    const encoder = new TextEncoder();
 
-    const messageBytes = new TextEncoder().encode(message);
-    const signatureBytes = window.bs58.decode(signature);
+    // 🔑 decode
+    const pubKey = bs58.decode(wallet);
+    const sig = bs58.decode(signature);
 
-    const publicKey = new solanaWeb3.PublicKey(wallet);
-    const publicKeyBytes = publicKey.toBytes();
+    // ⚠️ IMPORTANT: NON TOCCARE IL MESSAGGIO
+    const msgBytes = encoder.encode(message);
 
-    // ✅ Tentativo 1: messaggio diretto
-    let isValid = nacl.sign.detached.verify(
-      messageBytes,
-      signatureBytes,
-      publicKeyBytes
-    );
+    // 🔍 verifica
+    let valid = nacl.sign.detached.verify(msgBytes, sig, pubKey);
 
-    // ✅ Tentativo 2: con prefisso Solana
-    if (!isValid) {
-      const prefixed = "Solana Signed Message:\n" + message;
-
-      isValid = nacl.sign.detached.verify(
-        new TextEncoder().encode(prefixed),
-        signatureBytes,
-        publicKeyBytes
+    // fallback con prefisso (alcuni wallet)
+    if (!valid) {
+      const prefixed = `\x19Solana Signed Message:\n${message}`;
+      valid = nacl.sign.detached.verify(
+        encoder.encode(prefixed),
+        sig,
+        pubKey
       );
     }
 
-    resultDiv.innerHTML = isValid
-      ? "<span class='ok'>✅ Valid Signature</span>"
-      : "<span class='bad'>❌ Invalid Signature</span>";
+    resultDiv.innerHTML = valid
+      ? "<span class='ok'>✅ VALID SIGNATURE</span>"
+      : "<span class='bad'>❌ INVALID SIGNATURE</span>";
 
-  } catch (err) {
-    console.error(err);
-    resultDiv.innerHTML = "<span class='bad'>❌ Error: invalid input data</span>";
+  } catch (e) {
+    console.error(e);
+    resultDiv.innerHTML = "<span class='bad'>❌ ERROR</span>";
   }
 }
 </script>
