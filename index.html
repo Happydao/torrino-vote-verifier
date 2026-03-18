@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Torrino DAO - Vote Verifier</title>
+  <title>Torrino DAO Vote Verifier</title>
 
   <script src="https://cdn.jsdelivr.net/npm/tweetnacl/nacl.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bs58@5.0.0/dist/index.min.js"></script>
@@ -17,7 +17,7 @@
     }
 
     .container {
-      max-width: 700px;
+      max-width: 750px;
       margin: auto;
     }
 
@@ -72,6 +72,10 @@
       color: #94a3b8;
       margin-top: 10px;
     }
+
+    a {
+      color: #38bdf8;
+    }
   </style>
 </head>
 
@@ -82,48 +86,72 @@
   <h1>🔐 Torrino DAO Vote Verifier</h1>
 
   <p>
-    Questa pagina permette di verificare in modo indipendente che un voto sia stato realmente firmato dal wallet.
+    Verify DAO votes independently using cryptographic wallet signatures.
   </p>
 
   <div class="card">
-    <h3>🧠 Come funziona</h3>
+    <h3>📂 Where to get the data</h3>
     <p class="info">
-      Inserisci wallet, messaggio e firma.  
-      La verifica avviene direttamente nel tuo browser.  
-      Nessun dato viene inviato a server.
+      You can find all voting data inside the public CSV files stored here:<br><br>
+      👉 <a href="https://github.com/Happydao/torrino-dao-voting-core/tree/main/data" target="_blank">
+      Torrino DAO Voting Data (GitHub)
+      </a><br><br>
+
+      Open a proposal CSV and copy:
+      <br><br>
+      - <b>wallet</b><br>
+      - <b>signed_message</b><br>
+      - <b>signature</b>
     </p>
   </div>
 
   <div class="card">
 
-    <label>Wallet</label>
-    <input id="wallet" placeholder="Inserisci wallet address">
+    <h3>✍️ Input data</h3>
 
-    <label>Messaggio firmato</label>
-    <textarea id="message" rows="4" placeholder="Messaggio firmato"></textarea>
+    <label>Wallet address</label>
+    <input id="wallet" placeholder="Example: 59C4gdQT5VFq...">
 
-    <label>Signature</label>
-    <textarea id="signature" rows="3" placeholder="Signature"></textarea>
+    <label>Signed message (from CSV column: signed_message)</label>
+    <textarea id="message" rows="4" placeholder="Paste the signed_message from the CSV"></textarea>
 
-    <button onclick="verify()">Verifica voto</button>
+    <label>Signature (from CSV column: signature)</label>
+    <textarea id="signature" rows="3" placeholder="Paste the signature from the CSV"></textarea>
+
+    <button onclick="verify()">Verify Vote</button>
 
     <div id="result" class="result"></div>
 
   </div>
 
   <div class="card">
-    <h3>🔎 Cosa significa</h3>
+    <h3>🧠 What this verifies</h3>
     <p class="info">
-      ✅ Firma valida → il wallet ha firmato quel messaggio  
-      ❌ Firma non valida → dati errati o modificati  
+      This tool checks that:
+      <br><br>
+      ✔ The signature was produced by the wallet<br>
+      ✔ The message has not been altered<br>
+      ✔ The vote is cryptographically valid<br>
     </p>
   </div>
 
   <div class="card">
-    <h3>⚠️ Nota</h3>
+    <h3>⚠️ Important</h3>
     <p class="info">
-      Questo strumento verifica solo la firma crittografica.  
-      Non verifica NFT, voto duplicato o validità temporale.
+      This tool does NOT verify:
+      <br><br>
+      - NFT ownership<br>
+      - Voting eligibility<br>
+      - Duplicate votes<br>
+      - Proposal validity or timing<br>
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>🔐 Privacy</h3>
+    <p class="info">
+      All verification happens locally in your browser.<br>
+      No data is sent to any server.
     </p>
   </div>
 
@@ -148,13 +176,13 @@ function verify() {
     );
 
     resultDiv.innerText = isValid
-      ? "✅ Firma valida"
-      : "❌ Firma NON valida";
+      ? "✅ Valid Signature"
+      : "❌ Invalid Signature";
 
     resultDiv.className = "result " + (isValid ? "ok" : "bad");
 
   } catch (err) {
-    resultDiv.innerText = "Errore nei dati inseriti";
+    resultDiv.innerText = "Error: invalid input data";
     resultDiv.className = "result bad";
   }
 }
