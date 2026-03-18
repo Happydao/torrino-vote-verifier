@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Torrino DAO - Vote Verifier</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/tweetnacl/nacl.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bs58@5.0.0/dist/index.min.js"></script>
+
+  <style>
+    body {
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: auto;
+    }
+
+    h1 {
+      color: #38bdf8;
+    }
+
+    .card {
+      background: #1e293b;
+      padding: 20px;
+      border-radius: 12px;
+      margin-top: 20px;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      margin-top: 5px;
+      background: #0f172a;
+      color: white;
+    }
+
+    button {
+      margin-top: 15px;
+      padding: 12px;
+      width: 100%;
+      border: none;
+      border-radius: 8px;
+      background: #38bdf8;
+      color: black;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #0ea5e9;
+    }
+
+    .result {
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .ok { color: #22c55e; }
+    .bad { color: #ef4444; }
+
+    .info {
+      font-size: 14px;
+      color: #94a3b8;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <h1>🔐 Torrino DAO Vote Verifier</h1>
+
+  <p>
+    Questa pagina permette di verificare in modo indipendente che un voto sia stato realmente firmato dal wallet.
+  </p>
+
+  <div class="card">
+    <h3>🧠 Come funziona</h3>
+    <p class="info">
+      Inserisci wallet, messaggio e firma.  
+      La verifica avviene direttamente nel tuo browser.  
+      Nessun dato viene inviato a server.
+    </p>
+  </div>
+
+  <div class="card">
+
+    <label>Wallet</label>
+    <input id="wallet" placeholder="Inserisci wallet address">
+
+    <label>Messaggio firmato</label>
+    <textarea id="message" rows="4" placeholder="Messaggio firmato"></textarea>
+
+    <label>Signature</label>
+    <textarea id="signature" rows="3" placeholder="Signature"></textarea>
+
+    <button onclick="verify()">Verifica voto</button>
+
+    <div id="result" class="result"></div>
+
+  </div>
+
+  <div class="card">
+    <h3>🔎 Cosa significa</h3>
+    <p class="info">
+      ✅ Firma valida → il wallet ha firmato quel messaggio  
+      ❌ Firma non valida → dati errati o modificati  
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>⚠️ Nota</h3>
+    <p class="info">
+      Questo strumento verifica solo la firma crittografica.  
+      Non verifica NFT, voto duplicato o validità temporale.
+    </p>
+  </div>
+
+</div>
+
+<script>
+function verify() {
+  const wallet = document.getElementById("wallet").value.trim();
+  const message = document.getElementById("message").value.trim();
+  const signature = document.getElementById("signature").value.trim();
+  const resultDiv = document.getElementById("result");
+
+  try {
+    const messageBytes = new TextEncoder().encode(message);
+    const signatureBytes = bs58.decode(signature);
+    const publicKeyBytes = bs58.decode(wallet);
+
+    const isValid = nacl.sign.detached.verify(
+      messageBytes,
+      signatureBytes,
+      publicKeyBytes
+    );
+
+    resultDiv.innerText = isValid
+      ? "✅ Firma valida"
+      : "❌ Firma NON valida";
+
+    resultDiv.className = "result " + (isValid ? "ok" : "bad");
+
+  } catch (err) {
+    resultDiv.innerText = "Errore nei dati inseriti";
+    resultDiv.className = "result bad";
+  }
+}
+</script>
+
+</body>
+</html>
