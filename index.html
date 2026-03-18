@@ -5,16 +5,15 @@
   <title>Torrino DAO Vote Verifier</title>
 
   <!-- LIBRERIE -->
-  <script src="https://cdn.jsdelivr.net/npm/tweetnacl/nacl.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/bs58@5.0.0/dist/index.min.js"></script>
+  <script src="https://unpkg.com/tweetnacl@1.0.3/nacl.min.js"></script>
+  <script src="https://unpkg.com/bs58@5.0.0/dist/bs58.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
 
   <style>
     body {
       background: #0f172a;
       color: #e2e8f0;
-      font-family: Arial, sans-serif;
-      margin: 0;
+      font-family: Arial;
       padding: 20px;
     }
 
@@ -75,10 +74,6 @@
       color: #94a3b8;
       margin-top: 10px;
     }
-
-    a {
-      color: #38bdf8;
-    }
   </style>
 </head>
 
@@ -88,71 +83,30 @@
 
   <h1>🔐 Torrino DAO Vote Verifier</h1>
 
-  <p>
-    Verify DAO votes independently using cryptographic wallet signatures.
-  </p>
-
   <div class="card">
-    <h3>📂 Where to get the data</h3>
     <p class="info">
-      All voting data is publicly available in CSV format here:<br><br>
-      👉 <a href="https://github.com/Happydao/torrino-dao-voting-core/tree/main/data" target="_blank">
-      Torrino DAO Voting Data
-      </a><br><br>
-
-      From a CSV row, copy:
-      <br><br>
-      - <b>wallet</b><br>
-      - <b>signed_message</b><br>
-      - <b>signature</b>
+      Paste data from the CSV files:<br>
+      wallet → signed_message → signature
     </p>
   </div>
 
   <div class="card">
 
-    <h3>✍️ Input data</h3>
+    <h3>Input</h3>
 
     <label>Wallet address</label>
-    <input id="wallet" placeholder="Paste wallet from CSV">
+    <input id="wallet">
 
-    <label>Signed message (CSV column: signed_message)</label>
-    <textarea id="message" rows="4" placeholder="Paste EXACT signed_message (no changes)"></textarea>
+    <label>Signed message (CSV: signed_message)</label>
+    <textarea id="message" rows="4"></textarea>
 
-    <label>Signature (CSV column: signature)</label>
-    <textarea id="signature" rows="3" placeholder="Paste signature"></textarea>
+    <label>Signature (CSV: signature)</label>
+    <textarea id="signature" rows="3"></textarea>
 
     <button onclick="verify()">Verify Vote</button>
 
     <div id="result" class="result"></div>
 
-  </div>
-
-  <div class="card">
-    <h3>🧠 What this verifies</h3>
-    <p class="info">
-      ✔ The signature was produced by the wallet<br>
-      ✔ The message has not been modified<br>
-      ✔ The vote is cryptographically valid
-    </p>
-  </div>
-
-  <div class="card">
-    <h3>⚠️ Important</h3>
-    <p class="info">
-      This tool does NOT verify:<br><br>
-      - NFT ownership<br>
-      - Voting eligibility<br>
-      - Duplicate votes<br>
-      - Proposal validity or timing
-    </p>
-  </div>
-
-  <div class="card">
-    <h3>🔐 Privacy</h3>
-    <p class="info">
-      All verification happens locally in your browser.<br>
-      No data is sent to any server.
-    </p>
   </div>
 
 </div>
@@ -162,6 +116,7 @@ function verify() {
   const wallet = document.getElementById("wallet").value.trim();
   let message = document.getElementById("message").value;
   const signature = document.getElementById("signature").value.trim();
+
   const resultDiv = document.getElementById("result");
 
   try {
@@ -169,32 +124,43 @@ function verify() {
       throw new Error("Missing input");
     }
 
-    // pulizia base
-    message = message.replace(/\r/g, "").trim();
+    // 🔥 NORMALIZZA
+    message = message
+      .replace(/\r/g, "")
+      .replace(/\n/g, "")
+      .trim();
 
     const messageBytes = new TextEncoder().encode(message);
-    const signatureBytes = bs58.decode(signature);
+    const signatureBytes = window.bs58.decode(signature);
 
-    // 🔥 FIX IMPORTANTE
     const publicKey = new solanaWeb3.PublicKey(wallet);
     const publicKeyBytes = publicKey.toBytes();
 
-    const isValid = nacl.sign.detached.verify(
+    // ✅ Tentativo 1: messaggio diretto
+    let isValid = nacl.sign.detached.verify(
       messageBytes,
       signatureBytes,
       publicKeyBytes
     );
 
-    resultDiv.innerText = isValid
-      ? "✅ Valid Signature"
-      : "❌ Invalid Signature";
+    // ✅ Tentativo 2: con prefisso Solana
+    if (!isValid) {
+      const prefixed = "Solana Signed Message:\n" + message;
 
-    resultDiv.className = "result " + (isValid ? "ok" : "bad");
+      isValid = nacl.sign.detached.verify(
+        new TextEncoder().encode(prefixed),
+        signatureBytes,
+        publicKeyBytes
+      );
+    }
+
+    resultDiv.innerHTML = isValid
+      ? "<span class='ok'>✅ Valid Signature</span>"
+      : "<span class='bad'>❌ Invalid Signature</span>";
 
   } catch (err) {
     console.error(err);
-    resultDiv.innerText = "❌ Error: invalid input data";
-    resultDiv.className = "result bad";
+    resultDiv.innerHTML = "<span class='bad'>❌ Error: invalid input data</span>";
   }
 }
 </script>
